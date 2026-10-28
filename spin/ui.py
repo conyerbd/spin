@@ -123,10 +123,10 @@ def draw(app: "SpinApp", W: int, H: int) -> Grid:
             g.put(x + 3, y, f" {icon} ", P.bg, P.accent, True)
             g.put(x + 8, y, "▶|", P.fg)
             return x + 11
-        g.put(x, y, "|◀ b", P.fg)
-        g.put(x + 6, y, f" {icon} space ", P.bg, P.accent, True)
-        g.put(x + 18, y, "▶| n", P.fg)
-        return x + 24
+        g.put(x, y, "|◀", P.fg)
+        g.put(x + 4, y, f" {icon} space ", P.bg, P.accent, True)
+        g.put(x + 16, y, "▶|", P.fg)
+        return x + 20
 
     def hints(y, items):
         if app.status_text():
