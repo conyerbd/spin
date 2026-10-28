@@ -275,13 +275,15 @@ def draw(app: "SpinApp", W: int, H: int) -> Grid:
             label = app.section_label(key, label)
             n = len(app.lists.get(app.key_for(key)) or [])
             count = str(n) if n else ""
+            if len(label) > nav_w - 5 - len(count):
+                label = label.replace("last month", "month")
             if i == app.section:
                 g.fill(1, y, nav_w - 2, 1, P.accent if app.focus == "nav" else P.sel)
                 c = P.bg if app.focus == "nav" else P.accent
-                g.put(2, y, label, c, bold=True)
+                g.put(2, y, cut(label, nav_w - 5 - len(count)), c, bold=True)
                 g.put(nav_w - 2 - len(count), y, count, c, bold=True)
             else:
-                g.put(2, y, label, P.fg)
+                g.put(2, y, cut(label, nav_w - 5 - len(count)), P.fg)
                 g.put(nav_w - 2 - len(count), y, count, P.dim)
         g.put(2, pane_h - 1, "[ ]  section", P.dim)
 

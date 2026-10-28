@@ -89,7 +89,7 @@ class SpinApp(App):
         ("search", "search"),
     ]
     # Sections that `s` switches between albums and songs.
-    SONG_SECTIONS = {"pinned": "pinned songs", "recent": "recent songs", "saved": "liked songs", "top": "top songs"}
+    SONG_SECTIONS = {"pinned": "pinned songs", "recent": "recent songs", "saved": "liked songs", "top": "top songs · last month"}
 
     def __init__(self, cfg: dict, tokens: dict):
         super().__init__()

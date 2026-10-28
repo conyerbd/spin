@@ -98,7 +98,7 @@ def track_entry(tr: dict, album: dict | None = None) -> Entry:
 
 
 def recent_songs(items: list[dict]) -> list[Entry]:
-    """The last 50 plays as songs, newest first, each listed once with its play count."""
+    """The last 50 plays as songs, each listed once, most played first (newest first on ties)."""
     songs: OrderedDict[str, Entry] = OrderedDict()
     for it in items:
         tr = it.get("track") or {}
@@ -107,7 +107,7 @@ def recent_songs(items: list[dict]) -> list[Entry]:
         if tr["id"] not in songs:
             songs[tr["id"]] = track_entry(tr)
         songs[tr["id"]].plays += 1
-    return list(songs.values())
+    return sorted(songs.values(), key=lambda s: -s.plays)  # stable, so ties keep newest-first
 
 
 def saved_songs(items: list[dict]) -> list[Entry]:
