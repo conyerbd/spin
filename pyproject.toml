@@ -1,0 +1,21 @@
+[project]
+name = "spin"
+version = "0.1.0"
+description = "A terminal remote for the Spotify desktop app: recent albums, saved albums, and a visualizer."
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.11"
+dependencies = ["textual>=8", "httpx>=0.28", "pillow>=11"]
+
+[project.urls]
+Homepage = "https://github.com/conyerbd/spin"
+
+[project.scripts]
+spin = "spin.__main__:main"
+
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["spin"]
