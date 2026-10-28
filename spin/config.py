@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import time
 import tomllib
 from dataclasses import dataclass
 from pathlib import Path
@@ -62,6 +63,19 @@ class Palette:
     sel: str = "#3A3833"
     green: str = "#9DBF6B"
     red: str = "#D9764A"
+
+
+def prune_cache(days: int = 30) -> None:
+    """Spotify's terms say not to keep its content indefinitely: drop cached API
+    responses and cover art that haven't been refreshed in `days` days."""
+    cutoff = time.time() - days * 86400
+    for sub in ("api", "art"):
+        for f in (CACHE_DIR / sub).glob("*"):
+            try:
+                if f.is_file() and f.stat().st_mtime < cutoff:
+                    f.unlink()
+            except OSError:
+                pass
 
 
 def save_config(cfg: dict) -> None:

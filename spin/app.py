@@ -19,7 +19,7 @@ from . import library, player
 from .api import ApiError, RateLimited, Spotify
 from .art import ArtCache
 from .auth import AuthError
-from .config import THEME_NAMES, save_config, theme_palette
+from .config import THEME_NAMES, prune_cache, save_config, theme_palette
 from .library import Entry
 from .ui import draw, mode_for
 from .viz import MODES, Levels, Pcm
@@ -109,6 +109,7 @@ class SpinApp(App):
         self.queue_tracks: list[Entry] | None = None
         self._track_url = ""
         self.focus = "list"
+        self.show_art = cfg.get("art", True) is not False
         self.songs = cfg.get("view") == "songs"  # albums or songs in the SONG_SECTIONS
         self.pins = library.load_pins()
         self.lists: dict[str, list[Entry]] = {}
@@ -132,6 +133,7 @@ class SpinApp(App):
 
     async def on_mount(self) -> None:
         self.title = "spin"
+        prune_cache()
         self.screen.styles.background = self.pal.bg
         self.query_one(SpinView).focus()
         await self.levels.start(self.fps)
@@ -453,6 +455,32 @@ class SpinApp(App):
         else:
             self.play(e)
 
+    def open_target(self) -> Entry | None:
+        """What `o` opens: the highlighted track if a tracklist has focus, else the highlighted item."""
+        in_tracks = self.focus == "detail" or self.detail_open
+        if self.section_key == "now":
+            if in_tracks:
+                up = self.queue_tracks or []
+                return up[min(self.detail_sel, len(up) - 1)] if up else None
+            return self.ctx_entry
+        e = self.selected()
+        if e and e.kind != "track" and in_tracks:
+            tracks = self.detail_tracks() or []
+            if tracks:
+                return tracks[min(self.detail_sel, len(tracks) - 1)]
+        return e
+
+    @work(group="open")
+    async def open_in_spotify(self, e: Entry) -> None:
+        """Hand a spotify: URI to the desktop app (its URL handler), which shows that page."""
+        try:
+            proc = await asyncio.create_subprocess_exec(
+                "xdg-open", e.uri, stdout=asyncio.subprocess.DEVNULL, stderr=asyncio.subprocess.DEVNULL)
+            await proc.wait()
+            self.status(f"opened {e.name} in Spotify")
+        except OSError as err:
+            self.status(f"couldn't open Spotify: {err}")
+
     @work(group="queue")
     async def queue(self, tr: Entry) -> None:
         try:
@@ -578,6 +606,15 @@ class SpinApp(App):
             if i < len(self.current_list()):
                 self.sel[self.list_key] = i
                 self.play_row(i)
+        elif ch == "o":
+            target = self.open_target()
+            if target and target.uri:
+                self.open_in_spotify(target)
+        elif ch == "i":
+            self.show_art = not self.show_art
+            self.cfg["art"] = self.show_art
+            save_config(self.cfg)
+            self.status(f"cover art {'on' if self.show_art else 'off'}", 2)
         elif ch == "s":
             self.songs = not self.songs
             self.cfg["view"] = "songs" if self.songs else "albums"

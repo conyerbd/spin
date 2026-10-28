@@ -31,6 +31,7 @@ all without leaving the terminal. spin drives the Spotify desktop app, so playba
 - **Visualizers driven by the actual audio.** Spectrum bars from [cava](https://github.com/karlstav/cava),
   plus a triggered oscilloscope, a stereo goniometer and L/R meters fed by raw PipeWire samples.
 - **Cover art in the terminal.** Album covers drawn with half-block pixels; no image protocol needed.
+  Press `i` to hide them.
 - **One layout that fits any pane.** Three panes at full screen, stacked in a half, compact in a
   quarter tile. Built for tiling window managers.
 - **Themes.** Follows your [Omarchy](https://omarchy.org) theme, or pick synthwave, phosphor, amber,
@@ -125,7 +126,8 @@ spin logout     # forget the stored tokens
 | `[` `]` | previous / next section | `c` | jump to now playing |
 | `/` | search | `v` | next visualizer |
 | `r` | refresh this section | `t` | next theme |
-| `s` | albums ⇄ songs | `?` | all keys |
+| `s` | albums ⇄ songs | `o` | open in the Spotify app |
+| `i` | cover art on / off | `?` | all keys |
 | `q` | quit | | |
 
 The screen redraws at 60 fps. Add `"fps": 30` to `~/.config/spin/config.json` to halve the CPU it
@@ -184,7 +186,7 @@ says when to try again.
 | `~/.config/spin/config.json` | your Client ID, theme, visualizer, fps |
 | `~/.config/spin/auth.json` | Spotify tokens (mode 600) |
 | `~/.config/spin/pins.json` | pinned albums |
-| `~/.cache/spin/` | API responses and cover art |
+| `~/.cache/spin/` | API responses and cover art; anything not refreshed in 30 days is deleted at startup |
 
 ## ◆ Development
 
@@ -198,7 +200,10 @@ python3 -m venv .venv && .venv/bin/pip install -e .
 Built with [Textual](https://github.com/Textualize/textual). Spectrum by
 [cava](https://github.com/karlstav/cava). Music data and playback via the
 [Spotify Web API](https://developer.spotify.com/documentation/web-api). spin is not affiliated
-with or endorsed by Spotify.
+with or endorsed by Spotify. In keeping with Spotify's
+[Developer Terms](https://developer.spotify.com/terms), content is credited to Spotify on screen,
+`o` opens anything in the Spotify app, cached data expires after 30 days, and cover art can be
+turned off.
 
 ## ◆ License
 

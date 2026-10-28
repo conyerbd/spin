@@ -19,6 +19,7 @@ if TYPE_CHECKING:
     from .app import SpinApp
 
 LOGO = "[ s p i n ]"
+CREDIT = "via Spotify"
 SPIN = ["▁▃▅", "▃▅▇", "▅▇▅", "▇▅▃", "▅▃▁", "▃▁▃"]
 
 HELP = [
@@ -35,6 +36,8 @@ HELP = [
     ("p", "pin / unpin album"),
     ("c", "jump to now playing"),
     ("s", "albums ⇄ songs (pinned, recent, saved, top)"),
+    ("o", "open in the Spotify app"),
+    ("i", "cover art on / off"),
     ("v", "change visualizer"),
     ("t", "change theme"),
     ("/", "search"),
@@ -106,11 +109,23 @@ def draw(app: "SpinApp", W: int, H: int) -> Grid:
     frac = (now.position / now.length) if now.length else 0.0
     times = f"{clock(now.position)} / {clock(now.length)}" if now.length else ""
 
+    def no_art(x, y, w, h):
+        """Stand-in when cover art is turned off (Spotify's guidelines allow omitting it)."""
+        if h >= 3 and w >= 6:
+            g.box(x, y, w, h, P.line)
+            g.put(x + w // 2, y + h // 2, "♪", P.dim)
+        elif w >= 2:
+            g.put(x + w // 2 - 1, y, "♪", P.dim)
+
     def cover(x, y, w, h):
+        if not app.show_art:
+            return no_art(x, y, w, h)
         app.want_art(now.art_url)
         g.art(x, y, app.art.pixels(now.art_url, now.album or "spin", w, h * 2))
 
     def entry_art(e, x, y, w, h):
+        if not app.show_art:
+            return no_art(x, y, w, h)
         url = e.image if w <= 8 else e.image_big
         app.want_art(url)
         g.art(x, y, app.art.pixels(url, e.id or e.name, w, h * 2))
@@ -129,12 +144,15 @@ def draw(app: "SpinApp", W: int, H: int) -> Grid:
         return x + 20
 
     def hints(y, items):
+        # Spotify's terms ask for content to be credited to Spotify.
+        g.put(W - 1 - len(CREDIT), y, CREDIT, P.dim)
+        room = W - len(CREDIT) - 3
         if app.status_text():
-            g.put(1, y, cut(app.status_text(), W - 2), P.accent, bold=True)
+            g.put(1, y, cut(app.status_text(), room - 1), P.accent, bold=True)
             return
         x = 1
         for k, label in items:
-            if x + len(k) + 1 + len(label) > W - 1:
+            if x + len(k) + 1 + len(label) > room:
                 break
             x = g.put(x, y, k, P.fg, bold=True) + 1
             x = g.put(x, y, label, P.dim) + 3
