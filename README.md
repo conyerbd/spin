@@ -1,113 +1,202 @@
-# spin
+<div align="center">
 
-A terminal remote for the Spotify desktop app. It shows your recently played
-albums (grouped from your last 50 plays), saved albums, top albums, playlists
-and search, and plays them on the desktop app through Spotify Connect. The
-now-playing panel has half-block cover art, a spectrum visualizer, a real
-waveform scope and L/R level meters. The layout adapts from full screen down to
-a quarter tile.
+<h1><code>[ s p i n ]</code></h1>
 
-Built on [Omarchy](https://omarchy.org) (Hyprland), where it picks up your
-desktop theme's colours, but it runs on any Linux desktop with PipeWire.
+**An album-first terminal remote for Spotify, with real-audio visualizers.**
 
-## Requirements
+Jump back into the records you've been playing, browse your library, and watch the music move,
+all without leaving the terminal. spin drives the Spotify desktop app, so playback is the real thing.
 
-- Linux with PipeWire (`pw-record` feeds the scope and meters)
-- Python 3.11 or newer
-- The Spotify desktop app, running, on a **Premium** account (Spotify only
-  allows playback control through its API for Premium)
-- [`playerctl`](https://github.com/altdesktop/playerctl), for now playing and
-  transport controls
-- [`cava`](https://github.com/karlstav/cava) (recommended), for the spectrum
-  visualizers; without it they fall back to an animation
-- A terminal with truecolor and a font that has box-drawing, block and braille
-  characters (most Nerd Fonts and JetBrains Mono do)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-D9A441?style=flat-square&labelColor=2B2A27)](https://www.python.org)
+[![Linux](https://img.shields.io/badge/platform-linux-9DBF6B?style=flat-square&labelColor=2B2A27)](#requirements)
+[![Spotify Premium](https://img.shields.io/badge/spotify-premium-D9764A?style=flat-square&labelColor=2B2A27)](#requirements)
+[![MIT](https://img.shields.io/badge/license-MIT-E6DCC6?style=flat-square&labelColor=2B2A27)](LICENSE)
+
+<img src="docs/screenshots/full.png" alt="spin at full screen: library, recent albums, album tracklist and the now-playing deck with spectrum bars" width="100%">
+
+<sub>Screenshots use made-up demo albums and generated cover art.</sub>
+
+</div>
+
+## ◆ Features
+
+- **Recent albums, not recent tracks.** Your last 50 plays, grouped by album with play counts, and
+  marked when you played it as an album rather than from a playlist. Press `1`–`9` to put one straight back on.
+- **Your whole library.** Saved albums, top albums from the last month, playlists, search, and a
+  pinned list for the records in heavy rotation.
+- **A now playing tab.** The album or playlist that's on, with the current track highlighted and
+  your queue up next. `c` jumps to it from anywhere.
+- **Visualizers driven by the actual audio.** Spectrum bars from [cava](https://github.com/karlstav/cava),
+  plus a triggered oscilloscope, a stereo goniometer and L/R meters fed by raw PipeWire samples.
+- **Cover art in the terminal.** Album covers drawn with half-block pixels; no image protocol needed.
+- **One layout that fits any pane.** Three panes at full screen, stacked in a half, compact in a
+  quarter tile. Built for tiling window managers.
+- **Themes.** Follows your [Omarchy](https://omarchy.org) theme, or pick synthwave, phosphor, amber,
+  ice or mono.
+
+## ◆ Fits any pane
+
+<table>
+<tr>
+<td width="50%" valign="top"><img src="docs/screenshots/tall.png" alt="Tall half-screen layout in the phosphor theme with mirrored spectrum"><br><sub><b>Tall half</b> · phosphor · mirror</sub></td>
+<td width="50%" valign="top"><img src="docs/screenshots/quarter.png" alt="Quarter-tile layout in the ice theme"><br><sub><b>Quarter tile</b> · ice · bars</sub><br><br><img src="docs/screenshots/wide.png" alt="Wide half-screen layout in the amber theme with peak caps"><br><sub><b>Wide half</b> · amber · peaks</sub></td>
+</tr>
+</table>
+
+<img src="docs/screenshots/now-playing.png" alt="The now playing tab in the synthwave theme, with the oscilloscope visualizer and the up-next queue" width="100%">
+
+<sub><b>Now playing tab</b> · synthwave · scope: the playing album with its queue, and the real waveform below.</sub>
+
+## ◆ Visualizers and themes
+
+| Visualizer | What it shows | Source |
+|---|---|---|
+| `bars` | Frequency spectrum, bass on the left | cava |
+| `peaks` | Spectrum with falling peak caps | cava |
+| `mirror` | Spectrum with a reflection | cava |
+| `scope` | The real waveform, triggered so it holds still | pw-record |
+| `vector` | Stereo goniometer: mono is a vertical line, wide stereo spreads out | pw-record |
+
+The L/R meters are true per-channel RMS levels from the same raw audio. Press `v` to cycle
+visualizers and `t` to cycle themes: **omarchy** (your desktop theme, or a warm default elsewhere),
+**synthwave**, **phosphor**, **amber**, **ice** and **mono**. Both are remembered.
+
+## ◆ Requirements
+
+- Linux with **PipeWire** (`pw-record` feeds the scope and meters)
+- **Python 3.11** or newer
+- The **Spotify desktop app**, running, on a **Premium** account. Spotify only allows playback
+  control through its API for Premium.
+- [`playerctl`](https://github.com/altdesktop/playerctl) for now playing and transport controls
+- [`cava`](https://github.com/karlstav/cava), recommended, for the spectrum visualizers. Without it
+  they fall back to an animation.
+- A terminal with truecolor and a font with box-drawing, block and braille characters (most Nerd
+  Fonts and JetBrains Mono)
 
 On Arch: `sudo pacman -S playerctl cava`
 
-## Install
+## ◆ Install
 
-    pipx install git+https://github.com/conyerbd/spin
+```sh
+pipx install git+https://github.com/conyerbd/spin
+```
 
 or from a clone:
 
-    python3 -m venv .venv && .venv/bin/pip install .
+```sh
+git clone https://github.com/conyerbd/spin && cd spin
+python3 -m venv .venv && .venv/bin/pip install .
+```
 
-## Setup
+## ◆ Setup
 
-spin talks to Spotify through your own developer app, so nobody shares a
-client ID or a rate limit:
+spin talks to Spotify through **your own** developer app, so nobody shares a client ID or a rate
+limit. It takes a couple of minutes:
 
-1. Open <https://developer.spotify.com/dashboard> and choose **Create app**.
+1. Open the [Spotify developer dashboard](https://developer.spotify.com/dashboard) and choose
+   **Create app**.
 2. Give it any name and description.
 3. Add the Redirect URI `http://127.0.0.1:19872/login` exactly.
 4. Under "Which API/SDKs", tick **Web API**, then save.
-5. Run `spin` and paste the app's **Client ID** when asked. It is stored in
-   `~/.config/spin/config.json`.
+5. Run `spin` and paste the app's **Client ID** when asked. Your browser opens to sign in.
 
-New apps start in Development mode, which only lets accounts listed under the
-app's **User Management** sign in; the account that created the app is fine.
+New apps start in Development mode, which only lets accounts listed under the app's **User
+Management** sign in. The account that created the app is already fine.
 
-## Run
-
-    spin            # asks for your Client ID and signs in on first run
-    spin login      # sign in again
-    spin logout     # forget the stored tokens
+## ◆ Usage
 
 Start the Spotify desktop app first; spin plays through it.
 
-## Keys
+```sh
+spin            # asks for your Client ID and signs in on first run
+spin login      # sign in again
+spin logout     # forget the stored tokens
+```
 
-`j/k` move · `⏎` play · `1–9` play that row · `l/h` open/close tracks (pane
-focus on full screen) · `tab` next pane or section · `[ ]` section ·
-`space` play/pause · `n/b` next/previous · `+/-` volume · `a` queue track ·
-`p` pin album · `c` jump to now playing · `v` visualizer · `t` theme ·
-`/` search · `r` refresh · `?` help · `q` quit
+| Key | Action | Key | Action |
+|---|---|---|---|
+| `j` `k` `↑` `↓` | move | `space` | play / pause |
+| `⏎` | play album or track | `n` `b` | next / previous track |
+| `1`–`9` | play that row | `+` `-` | volume |
+| `l` `h` | open / close tracks (pane focus at full screen) | `a` | add track to queue |
+| `tab` | next pane, or next section in smaller layouts | `p` | pin / unpin album |
+| `[` `]` | previous / next section | `c` | jump to now playing |
+| `/` | search | `v` | next visualizer |
+| `r` | refresh this section | `t` | next theme |
+| `?` | all keys | `q` | quit |
 
-**Visualizers:** bars, peaks and mirror show cava's frequency spectrum; scope
-draws the real waveform (triggered like an oscilloscope) and vector is a stereo
-goniometer, both from raw audio captured with `pw-record`, which also drives the
-L/R meters.
+The screen redraws at 60 fps. Add `"fps": 30` to `~/.config/spin/config.json` to halve the CPU it
+uses.
 
-**Themes:** omarchy (follows your Omarchy theme, or a warm default elsewhere),
-synthwave, phosphor, amber, ice, mono.
+## ◆ Troubleshooting
 
-Both choices are remembered in `config.json`. The screen redraws at 60 fps; add
-`"fps": 30` there to halve the CPU it uses.
+<details>
+<summary><b>"Spotify crashed" notifications while the music keeps playing</b></summary>
 
-## Troubleshooting
+<br>
 
-**"Spotify crashed" notifications while music keeps playing.** That is Spotify's
-GPU helper process crashing and restarting, not spin. On Hyprland, Spotify runs
-through XWayland by default, but its graphics setup picks Wayland, and Mesa
-crashes on the mismatch (SIGSEGV in `libEGL_mesa` → `wl_proxy_create_wrapper`,
-seen in `coredumpctl`). Run Spotify natively on Wayland instead by creating
-`~/.config/spotify-flags.conf`, which the Arch `/usr/bin/spotify` launcher reads
-on every start:
+That's Spotify's GPU helper process crashing and restarting, not spin. On Hyprland, Spotify runs
+through XWayland by default, but its graphics setup picks Wayland, and Mesa crashes on the
+mismatch (a SIGSEGV in `libEGL_mesa` → `wl_proxy_create_wrapper`, visible in `coredumpctl`).
 
-    --enable-features=UseOzonePlatform
-    --ozone-platform=wayland
+Run Spotify natively on Wayland instead. Create `~/.config/spotify-flags.conf`, which the Arch
+`/usr/bin/spotify` launcher reads on every start:
 
-Quit Spotify fully and reopen it, then check that `hyprctl clients` shows
-`xwayland: 0` for its window. If Spotify misbehaves on Wayland, use
-`--disable-gpu` in that file instead.
+```
+--enable-features=UseOzonePlatform
+--ozone-platform=wayland
+```
 
-**Why not play audio in the terminal?** spin is a remote for the desktop app on
-purpose. In testing, librespot-based players (spotifyd, cliamp) signed in fine
-but Spotify refused them the audio decryption keys (`error audio key 0 1`), so
-every track failed.
+Quit Spotify fully and reopen it, then check that `hyprctl clients` shows `xwayland: 0` for its
+window. If Spotify misbehaves on Wayland, use `--disable-gpu` in that file instead.
 
-## Files
+</details>
 
-- `~/.config/spin/config.json` – your Client ID, theme, visualizer, fps
-- `~/.config/spin/auth.json` – Spotify tokens (mode 600)
-- `~/.config/spin/pins.json` – pinned albums
-- `~/.cache/spin/` – API responses and cover art
+<details>
+<summary><b>Why doesn't spin play the audio itself?</b></summary>
 
-## Development
+<br>
 
-    python3 -m venv .venv && .venv/bin/pip install -e .
+It's a remote for the desktop app on purpose. In testing, librespot-based players (spotifyd,
+cliamp) signed in fine but Spotify refused them the audio decryption keys (`error audio key 0 1`),
+so every track failed. The desktop app always works.
 
-## License
+</details>
 
-MIT
+<details>
+<summary><b>"Spotify rate limit" messages</b></summary>
+
+<br>
+
+spin caches library data on disk and reads now playing from the desktop app rather than the API,
+so it stays well under Spotify's limits. If one is hit anyway, spin keeps showing cached data and
+says when to try again.
+
+</details>
+
+## ◆ Files
+
+| Path | Holds |
+|---|---|
+| `~/.config/spin/config.json` | your Client ID, theme, visualizer, fps |
+| `~/.config/spin/auth.json` | Spotify tokens (mode 600) |
+| `~/.config/spin/pins.json` | pinned albums |
+| `~/.cache/spin/` | API responses and cover art |
+
+## ◆ Development
+
+```sh
+python3 -m venv .venv && .venv/bin/pip install -e .
+.venv/bin/python docs/screenshots.py   # regenerate the README screenshots from demo data
+```
+
+## ◆ Credits
+
+Built with [Textual](https://github.com/Textualize/textual). Spectrum by
+[cava](https://github.com/karlstav/cava). Music data and playback via the
+[Spotify Web API](https://developer.spotify.com/documentation/web-api). spin is not affiliated
+with or endorsed by Spotify.
+
+## ◆ License
+
+[MIT](LICENSE)

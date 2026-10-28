@@ -145,7 +145,8 @@ class SpinApp(App):
         await self.art.close()
 
     def tick(self) -> None:
-        self.query_one(SpinView).redraw()
+        for view in self.query(SpinView):  # empty while the app is shutting down
+            view.redraw()
 
     # ---- state the UI reads --------------------------------------------------
 

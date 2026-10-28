@@ -115,16 +115,17 @@ def draw(app: "SpinApp", W: int, H: int) -> Grid:
         g.art(x, y, app.art.pixels(url, e.id or e.name, w, h * 2))
 
     def controls(x, y, compact=False):
-        icon = "⏸" if now.playing else "⏵"
+        # Plain text glyphs: the ⏮/⏸/⏭ code points render as colour emoji in many fonts.
+        icon = "❚❚" if now.playing else "▶ "
         if compact:
-            g.put(x, y, "⏮", P.fg)
+            g.put(x, y, "|◀", P.fg)
             g.put(x + 3, y, f" {icon} ", P.bg, P.accent, True)
-            g.put(x + 8, y, "⏭", P.fg)
-            return x + 10
-        g.put(x, y, "⏮ b", P.fg)
-        g.put(x + 5, y, f" {icon} space ", P.bg, P.accent, True)
-        g.put(x + 16, y, "⏭ n", P.fg)
-        return x + 20
+            g.put(x + 8, y, "▶|", P.fg)
+            return x + 11
+        g.put(x, y, "|◀ b", P.fg)
+        g.put(x + 6, y, f" {icon} space ", P.bg, P.accent, True)
+        g.put(x + 18, y, "▶| n", P.fg)
+        return x + 24
 
     def hints(y, items):
         if app.status_text():
@@ -319,7 +320,7 @@ def draw(app: "SpinApp", W: int, H: int) -> Grid:
         else:
             g.wave(ix, dy + 11, iw, 1, t, level, P.line)
         hints(H - 2, [("j/k", "move"), ("⏎", "play"), ("1–9", "play row"), ("tab", "pane"), ("[ ]", "section"),
-                      ("space", "⏯"), ("n/b", "next/prev"), ("c", "now playing"), ("/", "search"), ("p", "pin"),
+                      ("space", "play/pause"), ("n/b", "next/prev"), ("c", "now playing"), ("/", "search"), ("p", "pin"),
                       ("v", "visual"), ("t", "theme"), ("?", "keys"), ("q", "quit")])
 
     # ---------------------------------------------------------------- wide
@@ -346,7 +347,7 @@ def draw(app: "SpinApp", W: int, H: int) -> Grid:
         sy = 3 + ch
         if H - 3 - sy > 0:
             visual(rx, sy, W - lw - 4, H - 3 - sy)
-        hints(H - 1, [("⏎", "play"), ("1–9", "play row"), ("l/h", "tracks"), ("tab", "section"), ("space", "⏯"),
+        hints(H - 1, [("⏎", "play"), ("1–9", "play row"), ("l/h", "tracks"), ("tab", "section"), ("space", "play/pause"),
                       ("n/b", "next/prev"), ("c", "now"), ("/", "search"), ("?", "keys")])
 
     # ---------------------------------------------------------------- tall
@@ -368,7 +369,7 @@ def draw(app: "SpinApp", W: int, H: int) -> Grid:
         title = app.list_title()
         g.box(0, 18, W, H - 20, P.accent, title, P.accent)
         list_rows(1, 20, W - 2, H - 23, not app.detail_open, True)
-        hints(H - 1, [("⏎", "play"), ("1–9", "row"), ("c", "now"), ("l/h", "tracks"), ("tab", "section"), ("space", "⏯"), ("?", "keys")])
+        hints(H - 1, [("⏎", "play"), ("1–9", "row"), ("c", "now"), ("l/h", "tracks"), ("tab", "section"), ("space", "play/pause"), ("?", "keys")])
 
     # ---------------------------------------------------------------- quarter
     else:
