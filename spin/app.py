@@ -88,6 +88,8 @@ class SpinApp(App):
         ("playlists", "playlists"),
         ("search", "search"),
     ]
+    # Sections that `s` switches between albums and songs.
+    SONG_SECTIONS = {"pinned": "pinned songs", "recent": "recent songs", "saved": "liked songs", "top": "top songs"}
 
     def __init__(self, cfg: dict, tokens: dict):
         super().__init__()
@@ -107,7 +109,10 @@ class SpinApp(App):
         self.queue_tracks: list[Entry] | None = None
         self._track_url = ""
         self.focus = "list"
-        self.lists: dict[str, list[Entry]] = {"pinned": library.load_pins()}
+        self.songs = cfg.get("view") == "songs"  # albums or songs in the SONG_SECTIONS
+        self.pins = library.load_pins()
+        self.lists: dict[str, list[Entry]] = {}
+        self._split_pins()
         self.loading: set[str] = set()
         self.errors: dict[str, str] = {}
         self.sel: dict[str, int] = {}
@@ -154,10 +159,26 @@ class SpinApp(App):
     def section_key(self) -> str:
         return self.SECTIONS[self.section][0]
 
+    def key_for(self, key: str) -> str:
+        """Where a section's entries live: `recent` holds albums, `recent:songs` holds songs."""
+        return f"{key}:songs" if self.songs and key in self.SONG_SECTIONS else key
+
+    @property
+    def list_key(self) -> str:
+        return self.key_for(self.section_key)
+
+    def section_label(self, key: str, label: str) -> str:
+        return self.SONG_SECTIONS[key] if self.songs and key in self.SONG_SECTIONS else label
+
+    def _split_pins(self) -> None:
+        self.lists["pinned"] = [p for p in self.pins if p.kind != "track"]
+        self.lists["pinned:songs"] = [p for p in self.pins if p.kind == "track"]
+
     def section_title(self) -> str:
         key, label = self.SECTIONS[self.section]
+        label = self.section_label(key, label)
         if key == "recent":
-            return "recent albums · last 50 plays"
+            return f"{label} · last 50 plays"
         if key == "now":
             return f"now playing · {self.ctx_entry.name}" if self.ctx_entry else "now playing"
         if key == "search" and getattr(self, "_query", ""):
@@ -174,18 +195,19 @@ class SpinApp(App):
         return self.section_title()
 
     def current_list(self) -> list[Entry]:
-        return self.lists.get(self.section_key) or []
+        return self.lists.get(self.list_key) or []
 
     def list_message(self) -> str:
         key = self.section_key
-        if key in self.loading:
+        if self.list_key in self.loading:
             return "loading…"
-        if key in self.errors:
-            return self.errors[key]
+        if self.list_key in self.errors:
+            return self.errors[self.list_key]
         if key == "now":
             return "nothing playing yet" if not self.now.title else "finding what's playing…"
         if key == "pinned":
-            return "nothing pinned yet: press p on an album to pin it here"
+            what = "a song" if self.songs else "an album"
+            return f"nothing pinned yet: press p on {what} to pin it here"
         if key == "search":
             return "press / to search"
         return "nothing here"
@@ -194,7 +216,7 @@ class SpinApp(App):
         items = self.current_list()
         if not items:
             return None
-        i = min(self.sel.get(self.section_key, 0), len(items) - 1)
+        i = min(self.sel.get(self.list_key, 0), len(items) - 1)
         return items[i]
 
     def detail_entry(self) -> Entry | None:
@@ -226,7 +248,7 @@ class SpinApp(App):
         return self.scroll[key]
 
     def is_pinned(self, e: Entry) -> bool:
-        return any(p.id == e.id for p in self.lists.get("pinned", []))
+        return any(p.id == e.id for p in self.pins)
 
     def status(self, text: str, seconds: float = 4) -> None:
         self._status = (text, time.monotonic() + seconds)
@@ -267,27 +289,32 @@ class SpinApp(App):
             if self.ctx_entry is None or force:
                 self.refresh_context()
             return
-        if key in ("pinned", "search") or (key in self.lists and not force):
+        songs = self.songs  # fixed for this load even if `s` is pressed meanwhile
+        lk = self.key_for(key)
+        if key in ("pinned", "search") or (lk in self.lists and not force):
             return
-        self.loading.add(key)
-        self.errors.pop(key, None)
+        self.loading.add(lk)
+        self.errors.pop(lk, None)
         try:
             if key == "recent":
-                self.lists[key] = library.recent_albums(await self.api.recently_played(force))
+                items = await self.api.recently_played(force)
+                self.lists[lk] = library.recent_songs(items) if songs else library.recent_albums(items)
             elif key == "saved":
-                self.lists[key] = library.saved_albums(await self.api.saved_albums(force))
+                self.lists[lk] = (library.saved_songs(await self.api.saved_tracks(force)) if songs
+                                  else library.saved_albums(await self.api.saved_albums(force)))
             elif key == "top":
-                self.lists[key] = library.top_albums(await self.api.top_tracks(force))
+                tracks = await self.api.top_tracks(force)
+                self.lists[lk] = [library.track_entry(t) for t in tracks] if songs else library.top_albums(tracks)
             elif key == "playlists":
-                self.lists[key] = library.playlists(await self.api.playlists(force))
+                self.lists[lk] = library.playlists(await self.api.playlists(force))
             if force:
-                self.status(f"refreshed {dict(self.SECTIONS)[key]}")
+                self.status(f"refreshed {self.section_label(key, dict(self.SECTIONS)[key])}")
         except RateLimited as e:
-            self.errors[key] = f"Spotify rate limit, try again in {int(e.retry_after // 60) + 1} min"
+            self.errors[lk] = f"Spotify rate limit, try again in {int(e.retry_after // 60) + 1} min"
         except NET_ERRORS as e:
-            self.errors[key] = f"couldn't load: {e}"
+            self.errors[lk] = f"couldn't load: {e}"
         finally:
-            self.loading.discard(key)
+            self.loading.discard(lk)
 
     async def _tracks(self, e: Entry) -> list[Entry] | None:
         """An album's or playlist's tracks, cached; None if Spotify is rate limiting."""
@@ -399,6 +426,33 @@ class SpinApp(App):
         await asyncio.sleep(0.6)
         self.poll_player()
 
+    @work(exclusive=True, group="play")
+    async def play_songs(self, songs: list[Entry], i: int) -> None:
+        """Play a song from a song list, then carry on down that list."""
+        if not self.now.available:
+            self.status("start the Spotify desktop app first, then try again")
+            return
+        uris = [s.uri for s in songs[i:i + 100] if s.uri]
+        try:
+            await self.api.play_uris(await self._device() or None, uris)
+            self.status(f"playing {songs[i].name}")
+        except (RateLimited, *NET_ERRORS) as err:
+            await player.open_uri(songs[i].uri)
+            self.status(f"playing {songs[i].name} (via desktop app: {err})")
+        await asyncio.sleep(0.6)
+        self.poll_player()
+
+    def play_row(self, i: int) -> None:
+        """Play entry i of the current list the way that list calls for."""
+        items = self.current_list()
+        e = items[i]
+        if self.section_key == "now" and self.ctx_entry:
+            self.play(self.ctx_entry, e)
+        elif e.kind == "track" and self.section_key in self.SONG_SECTIONS:
+            self.play_songs(items, i)
+        else:
+            self.play(e)
+
     @work(group="queue")
     async def queue(self, tr: Entry) -> None:
         try:
@@ -438,22 +492,21 @@ class SpinApp(App):
             return
         items = self.current_list()
         if items:
-            key = self.section_key
+            key = self.list_key
             self.sel[key] = max(0, min(len(items) - 1, self.sel.get(key, 0) + d))
             self.detail_sel = 0
 
     def toggle_pin(self, e: Entry | None) -> None:
-        if not e or e.kind == "track":
-            self.status("pin works on albums and playlists")
+        if not e:
             return
-        pins = self.lists.setdefault("pinned", [])
         if self.is_pinned(e):
-            pins[:] = [p for p in pins if p.id != e.id]
+            self.pins = [p for p in self.pins if p.id != e.id]
             self.status(f"unpinned {e.name}")
         else:
-            pins.append(e)
-            self.status(f"pinned {e.name}")
-        library.save_pins(pins)
+            self.pins.append(e)
+            self.status(f"pinned {e.name}" + (" (see it under pinned songs)" if e.kind == "track" and not self.songs else ""))
+        library.save_pins(self.pins)
+        self._split_pins()
 
     async def handle_key(self, event: events.Key) -> bool:
         k, ch = event.key, event.character or ""
@@ -514,21 +567,24 @@ class SpinApp(App):
                     self.play(up[min(self.detail_sel, len(up) - 1)])
             elif now_tab and e and self.ctx_entry:
                 self.play(self.ctx_entry, e)
-            elif e and (self.focus == "detail" or (self.detail_open and not full)):
+            elif e and e.kind != "track" and (self.focus == "detail" or (self.detail_open and not full)):
                 tracks = self.detail_tracks() or []
                 if tracks:
-                    self.play(e, tracks[min(self.detail_sel, len(tracks) - 1)] if e.kind != "track" else None)
+                    self.play(e, tracks[min(self.detail_sel, len(tracks) - 1)])
             elif e:
-                self.play(e)
+                self.play_row(min(self.sel.get(self.list_key, 0), len(self.current_list()) - 1))
         elif ch.isdigit() and ch != "0":
-            items = self.current_list()
             i = int(ch) - 1
-            if i < len(items):
-                self.sel[self.section_key] = i
-                if self.section_key == "now" and self.ctx_entry:
-                    self.play(self.ctx_entry, items[i])
-                else:
-                    self.play(items[i])
+            if i < len(self.current_list()):
+                self.sel[self.list_key] = i
+                self.play_row(i)
+        elif ch == "s":
+            self.songs = not self.songs
+            self.cfg["view"] = "songs" if self.songs else "albums"
+            save_config(self.cfg)
+            self.detail_open, self.detail_sel = False, 0
+            self.load_section(self.section_key)
+            self.status(f"showing {'songs' if self.songs else 'albums'} in pinned, recent, saved and top", 3)
         elif k == "space":
             self.player_cmd("play-pause")
         elif ch == "n":
@@ -571,7 +627,8 @@ class SpinApp(App):
             self.push_screen(SearchScreen(), self.run_search)
         elif ch == "r":
             if self.section_key == "pinned":
-                self.lists["pinned"] = library.load_pins()
+                self.pins = library.load_pins()
+                self._split_pins()
             else:
                 self.load_section(self.section_key, force=True)
         else:

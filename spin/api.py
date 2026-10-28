@@ -110,6 +110,9 @@ class Spotify:
     async def saved_albums(self, force=False):
         return await self.paged("/me/albums", ttl=6 * 3600, force=force)
 
+    async def saved_tracks(self, force=False):
+        return await self.paged("/me/tracks", ttl=6 * 3600, force=force)
+
     async def top_tracks(self, force=False):
         return (await self.get("/me/top/tracks", {"time_range": "short_term", "limit": 50}, ttl=6 * 3600, force=force)).get("items", [])
 
@@ -138,6 +141,11 @@ class Spotify:
             body["offset"] = {"uri": offset_uri}
         params = {"device_id": device_id} if device_id else None
         await self.request("PUT", "/me/player/play", params=params, json_body=body)
+
+    async def play_uris(self, device_id, uris):
+        """Play a list of tracks in order (the selected song, then the ones after it)."""
+        params = {"device_id": device_id} if device_id else None
+        await self.request("PUT", "/me/player/play", params=params, json_body={"uris": uris})
 
     async def queue(self, uri, device_id=None):
         params = {"uri": uri}

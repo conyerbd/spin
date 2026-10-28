@@ -34,6 +34,7 @@ HELP = [
     ("a", "add track to queue"),
     ("p", "pin / unpin album"),
     ("c", "jump to now playing"),
+    ("s", "albums ⇄ songs (pinned, recent, saved, top)"),
     ("v", "change visualizer"),
     ("t", "change theme"),
     ("/", "search"),
@@ -141,6 +142,7 @@ def draw(app: "SpinApp", W: int, H: int) -> Grid:
     def tabs():
         x = g.put(1, 0, LOGO, P.green, bold=True) + 2
         for i, (key, label) in enumerate(app.SECTIONS):
+            label = app.section_label(key, label)
             short = label.split(" ")[0] if W < 100 else label.split(" · ")[0]
             s = f" {short} "
             if x + len(s) > W - 10:
@@ -159,7 +161,7 @@ def draw(app: "SpinApp", W: int, H: int) -> Grid:
         if app.detail_open and mode != "full":
             return track_rows(x, y, w, h, focused=True)
         entries = app.current_list()
-        key = app.section_key
+        key, lk = app.section_key, app.list_key
         per = 3 if two_line else 1
 
         def fits(rows):
@@ -177,8 +179,8 @@ def draw(app: "SpinApp", W: int, H: int) -> Grid:
             ctx = app.ctx_entry
             track_list(x, y, w, h, entries, app.sel.get("now", 0), focused, "now", bool(ctx and ctx.kind == "playlist"))
             return
-        sel = app.sel.get(key, 0)
-        top = app.scroll_to(key, sel, cap)
+        sel = app.sel.get(lk, 0)
+        top = app.scroll_to(lk, sel, cap)
         for vi, i in enumerate(range(top, min(len(entries), top + cap))):
             e, yy, is_sel = entries[i], y + vi * per, i == sel
             if is_sel:
@@ -193,8 +195,16 @@ def draw(app: "SpinApp", W: int, H: int) -> Grid:
                 entry_art(e, x + 3, yy, 4, 2)
                 right = 17 if plays else 0
                 g.put(x + 9, yy, cut(e.name, w - 11 - right), P.accent if is_sel and focused else P.fg, bold=True)
-                sub = e.sub if e.kind != "track" else f"{e.sub} · track"
+                if e.kind != "track":
+                    sub = e.sub
+                elif key == "search":
+                    sub = f"{e.sub} · track"  # search mixes albums and tracks
+                else:
+                    sub = f"{e.sub} · {e.album}" if e.album else e.sub
                 g.put(x + 9, yy + 1, cut(sub, w - 11 - right), P.dim)
+                if e.kind == "track" and e.duration_ms and not plays:
+                    dur = clock(e.duration_ms / 1000)
+                    g.put(x + w - 1 - len(dur), yy, dur, P.dim)
                 if plays:
                     top_plays = max(en.plays for en in entries) or 1
                     g.put(x + w - 17, yy, "▇" * max(1, round(e.plays / top_plays * 14)), P.accent if is_sel else P.dim)
@@ -262,7 +272,8 @@ def draw(app: "SpinApp", W: int, H: int) -> Grid:
         g.box(0, 1, nav_w, pane_h, P.accent if app.focus == "nav" else P.line, "library", P.accent if app.focus == "nav" else P.dim)
         for i, (key, label) in enumerate(app.SECTIONS):
             y = 3 + i * 2
-            n = len(app.lists.get(key) or [])
+            label = app.section_label(key, label)
+            n = len(app.lists.get(app.key_for(key)) or [])
             count = str(n) if n else ""
             if i == app.section:
                 g.fill(1, y, nav_w - 2, 1, P.accent if app.focus == "nav" else P.sel)
@@ -290,7 +301,11 @@ def draw(app: "SpinApp", W: int, H: int) -> Grid:
             g.put(dx + 24, 3, cut(e.name, info_w), P.fg, bold=True)
             g.put(dx + 24, 4, cut(e.sub, info_w), P.dim)
             tracks = app.detail_tracks()
-            if tracks is not None:
+            if e.kind == "track":
+                g.put(dx + 24, 5, cut(e.album, info_w), P.dim)
+                if e.duration_ms:
+                    g.put(dx + 24, 6, clock(e.duration_ms / 1000), P.dim)
+            elif tracks is not None:
                 g.put(dx + 24, 5, f"{len(tracks)} up next" if app.section_key == "now" else f"{len(tracks)} tracks", P.dim)
             g.put(dx + 24, 8, " ⏎ play ", P.bg, P.accent, True)
             g.put(dx + 33, 8, " p pin " if not app.is_pinned(e) else " p unpin ", P.fg, P.sel)
@@ -320,7 +335,7 @@ def draw(app: "SpinApp", W: int, H: int) -> Grid:
         else:
             g.wave(ix, dy + 11, iw, 1, t, level, P.line)
         hints(H - 2, [("j/k", "move"), ("⏎", "play"), ("1–9", "play row"), ("tab", "pane"), ("[ ]", "section"),
-                      ("space", "play/pause"), ("n/b", "next/prev"), ("c", "now playing"), ("/", "search"), ("p", "pin"),
+                      ("space", "play/pause"), ("n/b", "next/prev"), ("c", "now playing"), ("s", "albums/songs"), ("/", "search"), ("p", "pin"),
                       ("v", "visual"), ("t", "theme"), ("?", "keys"), ("q", "quit")])
 
     # ---------------------------------------------------------------- wide

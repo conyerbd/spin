@@ -22,6 +22,7 @@ class Entry:
     note: str = ""  # e.g. "played as album"
     album_uri: str = ""  # tracks: the album they belong to
     duration_ms: int = 0
+    album: str = ""  # tracks: the album's name
 
 
 def _images(images: list[dict]) -> tuple[str, str]:
@@ -93,7 +94,25 @@ def track_entry(tr: dict, album: dict | None = None) -> Entry:
     album = album or tr.get("album") or {}
     small, big = _images(album.get("images", []))
     return Entry("track", tr.get("id") or "", tr.get("uri", ""), tr.get("name", ""), _artists(tr), 0, small, big,
-                 album_uri=album.get("uri", ""), duration_ms=tr.get("duration_ms", 0))
+                 album_uri=album.get("uri", ""), duration_ms=tr.get("duration_ms", 0), album=album.get("name", ""))
+
+
+def recent_songs(items: list[dict]) -> list[Entry]:
+    """The last 50 plays as songs, newest first, each listed once with its play count."""
+    songs: OrderedDict[str, Entry] = OrderedDict()
+    for it in items:
+        tr = it.get("track") or {}
+        if not tr.get("id"):
+            continue
+        if tr["id"] not in songs:
+            songs[tr["id"]] = track_entry(tr)
+        songs[tr["id"]].plays += 1
+    return list(songs.values())
+
+
+def saved_songs(items: list[dict]) -> list[Entry]:
+    """Liked Songs, newest first."""
+    return [track_entry(it["track"]) for it in items if (it.get("track") or {}).get("id")]
 
 
 def search_results(data: dict) -> list[Entry]:

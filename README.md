@@ -24,6 +24,8 @@ all without leaving the terminal. spin drives the Spotify desktop app, so playba
   marked when you played it as an album rather than from a playlist. Press `1`–`9` to put one straight back on.
 - **Your whole library.** Saved albums, top albums from the last month, playlists, search, and a
   pinned list for the records in heavy rotation.
+- **Albums or songs, your call.** Press `s` to flip pinned, recent, saved and top to songs: recent
+  plays, Liked Songs and top tracks. Playing one carries on down the list.
 - **A now playing tab.** The album or playlist that's on, with the current track highlighted and
   your queue up next. `c` jumps to it from anywhere.
 - **Visualizers driven by the actual audio.** Spectrum bars from [cava](https://github.com/karlstav/cava),
@@ -123,7 +125,8 @@ spin logout     # forget the stored tokens
 | `[` `]` | previous / next section | `c` | jump to now playing |
 | `/` | search | `v` | next visualizer |
 | `r` | refresh this section | `t` | next theme |
-| `?` | all keys | `q` | quit |
+| `s` | albums ⇄ songs | `?` | all keys |
+| `q` | quit | | |
 
 The screen redraws at 60 fps. Add `"fps": 30` to `~/.config/spin/config.json` to halve the CPU it
 uses.
